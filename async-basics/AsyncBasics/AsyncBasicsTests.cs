@@ -155,6 +155,48 @@ namespace AsyncBasics
             Assert.AreEqual(2, contents.Length);
         }
 
+        Func<Task> method1 = async () =>
+        {
+            await Task.Delay(1);
+            throw new NotImplementedException();
+        };
+
+        Func<Task> method2 = async () =>
+        {
+            await Task.Delay(1);
+            throw new InvalidOperationException();
+        };
+
+        [Test]
+        public async Task OnlyOneExceptionIsThrownWhenAwaitedMultipleTasksTest()
+        {
+            try
+            {
+                Task allDone = Task.WhenAll(method1(), method2());
+                await allDone;
+            }
+            catch (Exception e)
+            {
+                Assert.IsTrue(e is NotImplementedException || e is InvalidOperationException);
+            }
+        }
+
+        [Test]
+        public async Task ErrorPropertyContainsAllExceptionsFromAwaitedTasksTest()
+        {
+            Task allDone = null;
+            try
+            {
+                allDone = Task.WhenAll(method1(), method2());
+                await allDone;
+            }
+            catch (Exception)
+            {
+                Assert.IsInstanceOf<AggregateException>(allDone.Exception);
+                Assert.AreEqual(2, allDone.Exception.InnerExceptions.Count);
+            }
+        }
+
         #endregion
     }
 }
