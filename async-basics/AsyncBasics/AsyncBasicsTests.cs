@@ -155,21 +155,21 @@ namespace AsyncBasics
             Assert.AreEqual(2, contents.Length);
         }
 
-        Func<Task> method1 = async () =>
-        {
-            await Task.Delay(1);
-            throw new NotImplementedException();
-        };
-
-        Func<Task> method2 = async () =>
-        {
-            await Task.Delay(1);
-            throw new InvalidOperationException();
-        };
-
         [Test]
         public async Task OnlyOneExceptionIsThrownWhenAwaitedMultipleTasksTest()
         {
+            Func<Task> method1 = async () =>
+            {
+                await Task.Delay(1);
+                throw new NotImplementedException();
+            };
+
+            Func<Task> method2 = async () =>
+            {
+                await Task.Delay(1);
+                throw new InvalidOperationException();
+            };
+
             try
             {
                 Task allDone = Task.WhenAll(method1(), method2());
@@ -184,6 +184,18 @@ namespace AsyncBasics
         [Test]
         public async Task ErrorPropertyContainsAllExceptionsFromAwaitedTasksTest()
         {
+            Func<Task> method1 = async () =>
+            {
+                await Task.Delay(1);
+                throw new NotImplementedException();
+            };
+
+            Func<Task> method2 = async () =>
+            {
+                await Task.Delay(1);
+                throw new InvalidOperationException();
+            };
+
             Task allDone = null;
             try
             {
@@ -195,6 +207,31 @@ namespace AsyncBasics
                 Assert.IsInstanceOf<AggregateException>(allDone.Exception);
                 Assert.AreEqual(2, allDone.Exception.InnerExceptions.Count);
             }
+        }
+
+        #endregion
+
+        #region Waiting for Any Task to complete
+
+        [Test]
+        public async Task GetResultFromFastestSourceTestAsync()
+        {
+            Func<Task<int>> method1 = async () =>
+            {
+                await Task.Delay(100);
+                return 1;
+            };
+
+            Func<Task<int>> method2 = async () =>
+            {
+                await Task.Delay(1);
+                return 2;
+            };
+
+            var firstCompletedTask = await Task.WhenAny(method1(), method2());
+            int result = await firstCompletedTask;
+
+            Assert.AreEqual(2, result);
         }
 
         #endregion
