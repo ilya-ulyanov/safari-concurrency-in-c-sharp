@@ -235,5 +235,37 @@ namespace AsyncBasics
         }
 
         #endregion
+
+        #region Processing Tasks as they complete
+
+        [Test]
+        public async Task ProcessTasksResultsAsTheyCompleteTestAsync()
+        {
+            Func<int, Task<int>> delayAndReturn = async input =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(input));
+                return input;
+            };
+
+            int result = -1;
+            Action<Task<int>> handler = async task =>
+            {
+                var r = await task;
+                Debug.WriteLine(r);
+                Interlocked.CompareExchange(ref result, r, -1);
+            };
+
+            Task taskA = delayAndReturn(2).ContinueWith(handler);
+            Task taskB = delayAndReturn(3).ContinueWith(handler);
+            Task taskC = delayAndReturn(1).ContinueWith(handler);
+
+            Task[] tasks = { taskA, taskB, taskC };
+
+            await Task.WhenAll(tasks);
+
+            Assert.AreEqual(1, result);
+        }
+
+        #endregion
     }
 }
