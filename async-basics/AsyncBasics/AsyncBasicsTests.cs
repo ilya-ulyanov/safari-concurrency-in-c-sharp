@@ -134,5 +134,27 @@ namespace AsyncBasics
         }
 
         #endregion
+
+        #region Waiting for a set of Tasks to complete
+
+        [Test]
+        public async Task DownloadFromTwoUrlsTestAsync()
+        {
+            string url1 = "http://google.com";
+            string url2 = "http://gmail.com";
+
+            string[] contents;
+
+            using (var client = new HttpClient())
+            {
+                var downloadTask1 = client.GetStringAsync(url1);
+                var downloadTask2 = client.GetStringAsync(url2);
+                contents = await Task.WhenAll(downloadTask1, downloadTask2);
+            }
+
+            Assert.AreEqual(2, contents.Length);
+        }
+
+        #endregion
     }
 }
