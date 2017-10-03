@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ namespace ParallelBasics
     [TestFixture]
     public class ParallelBasicsTests
     {
+        #region Parallel processing
+
         private class WorkItem
         {
             private Random random = new Random();
@@ -66,6 +69,10 @@ namespace ParallelBasics
             });
         }
 
+        #endregion
+
+        #region Parallel aggregation
+
         [Test]
         public void ParallelAggregationTest()
         {
@@ -81,5 +88,38 @@ namespace ParallelBasics
             result = items.AsParallel().Aggregate(seed: 0, func: (sum, item) => sum + item);
             Assert.AreEqual(50005000, result);
         }
+
+        #endregion
+
+        #region Parallel invocation
+
+        [Test]
+        public void ParallelInvocationTest()
+        {
+            Action a = () => 
+            {
+                Thread.Sleep(20);
+                Debug.WriteLine("[" + Thread.CurrentThread.ManagedThreadId + "] Execution finished");
+            };
+
+            var delegates = Enumerable.Repeat(a, 20);
+            Parallel.Invoke(delegates.ToArray());
+        }
+
+        [Test]
+        public void ParallelInvocationCancellationTest()
+        {
+            Action a = () =>
+            {
+                Thread.Sleep(20);
+                Debug.WriteLine("[" + Thread.CurrentThread.ManagedThreadId + "] Execution finished");
+            };
+
+            var delegates = Enumerable.Repeat(a, 2000);
+            CancellationTokenSource cts = new CancellationTokenSource(delay: TimeSpan.FromSeconds(1));
+            Assert.Throws<OperationCanceledException>(() => Parallel.Invoke(new ParallelOptions { CancellationToken = cts.Token }, delegates.ToArray()));
+        }
+
+        #endregion
     }
 }
