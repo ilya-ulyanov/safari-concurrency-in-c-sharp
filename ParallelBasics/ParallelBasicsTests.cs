@@ -77,6 +77,9 @@ namespace ParallelBasics
                 (item, state, localSum) => localSum += item, 
                 localSum => Interlocked.Add(ref result, localSum));
             Assert.AreEqual(50005000, result);
+
+            result = items.AsParallel().Aggregate(seed: 0, func: (sum, item) => sum + item);
+            Assert.AreEqual(50005000, result);
         }
     }
 }
