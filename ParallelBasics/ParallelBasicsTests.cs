@@ -39,7 +39,7 @@ namespace ParallelBasics
             int processedItemsCount = 0;
             var result = Parallel.ForEach(items, (item, state) =>
             {
-                if (item.Duration > 450)
+                if (processedItemsCount > 50)
                 {
                     state.Stop();
                     return;
