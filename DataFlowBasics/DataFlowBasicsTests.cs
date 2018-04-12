@@ -43,5 +43,28 @@ namespace DataFlowBasics
 
             Assert.ThrowsAsync<InvalidOperationException>(async () => await block.Completion);
         }
+
+        [Test]
+        public void LinkedBlocks_PropagatingErrorTestAsync()
+        {
+            var multiplyBlock = new TransformBlock<int, int>(item =>
+            {
+                if (item == 1)
+                {
+                    throw new InvalidOperationException("Blech.");
+                }
+
+                return item * 2;
+            });
+
+            var subtractBlock = new TransformBlock<int, int>(i => i - 2);
+
+            multiplyBlock.LinkTo(subtractBlock, new DataflowLinkOptions { PropagateCompletion = true });
+
+            multiplyBlock.Post(1);
+            multiplyBlock.Post(2);
+
+            Assert.ThrowsAsync<AggregateException>(async () => await subtractBlock.Completion);
+        }
     }
 }
