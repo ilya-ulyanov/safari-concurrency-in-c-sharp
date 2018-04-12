@@ -15,67 +15,22 @@ namespace AsyncBasics
         [Test]
         public async Task DelayResultTestAsync()
         {
-            int result = await DelayResult(42, TimeSpan.FromSeconds(1));
+            int result = await AsyncUtils.DelayResult(42, TimeSpan.FromSeconds(1));
             Assert.AreEqual(42, result);
-        }
-
-        private async Task<T> DelayResult<T>(T result, TimeSpan delay)
-        {
-            await Task.Delay(delay);
-            return result;
         }
 
         [Test]
         public async Task DownloadWithRetriesTestAsync()
         {
-            string result = await DownloadWithRetriesAsync("http://google.com");
+            string result = await AsyncUtils.DownloadAsStringWithRetriesAsync("http://google.com");
             Assert.IsNotEmpty(result);
-        }
-
-        private async Task<string> DownloadWithRetriesAsync(string url)
-        {
-            using(var client = new HttpClient())
-            {
-                TimeSpan nextDelay = TimeSpan.FromSeconds(1);
-                for (int i = 0; i < 3; i++)
-                {
-                    try
-                    {
-                        return await client.GetStringAsync(url);
-                    }
-                    catch (Exception)
-                    {
-                    }
-
-                    await Task.Delay(nextDelay);
-                    nextDelay = nextDelay + nextDelay;
-                }
-
-                return await client.GetStringAsync(url);
-            }
         }
 
         [Test]
         public async Task DownloadWithTimeoutTest()
         {
-            string result = await DownloadWithTimeoutAsync("http://google.com", TimeSpan.FromSeconds(2));
+            string result = await AsyncUtils.DownloadAsStringWithTimeoutAsync("http://google.com");
             Assert.IsNotEmpty(result);
-        }
-
-        private async Task<string> DownloadWithTimeoutAsync(string url, TimeSpan timeout)
-        {
-            using (var client = new HttpClient())
-            {
-                var downloadTask = client.GetStringAsync(url);
-                var timeoutTask = Task.Delay(timeout);
-                var firstCompleted = await Task.WhenAny(downloadTask, timeoutTask);
-                if(ReferenceEquals(firstCompleted, timeoutTask))
-                {
-                    return null;
-                }
-
-                return await downloadTask;
-            }
         }
 
         #endregion
@@ -85,6 +40,8 @@ namespace AsyncBasics
         public interface IMyAsyncInterface
         {
             Task<int> GetValueAsync();
+
+            Task<T> NotImplementedAsync<T>();
         }
 
         public class MySyncImplementation : IMyAsyncInterface
@@ -92,6 +49,14 @@ namespace AsyncBasics
             public Task<int> GetValueAsync()
             {
                 return Task.FromResult(42);
+            }
+
+            public Task<T> NotImplementedAsync<T>()
+            {
+                return Task.FromException<T>(new NotImplementedException());
+                //var tcs = new TaskCompletionSource<T>();
+                //tcs.SetException(new NotImplementedException());
+                //return tcs.Task;
             }
         }
 
@@ -102,6 +67,13 @@ namespace AsyncBasics
             IMyAsyncInterface itf = new MySyncImplementation();
             var result = await itf.GetValueAsync().ConfigureAwait(false);
             Assert.AreEqual(originalThreadId, Thread.CurrentThread.ManagedThreadId);
+        }
+
+        [Test]
+        public void FailedTaskTestAsync()
+        {
+            IMyAsyncInterface itf = new MySyncImplementation();
+            Assert.ThrowsAsync<NotImplementedException>(async () => await itf.NotImplementedAsync<int>());
         }
 
         #endregion
@@ -140,18 +112,7 @@ namespace AsyncBasics
         [Test]
         public async Task DownloadFromTwoUrlsTestAsync()
         {
-            string url1 = "http://google.com";
-            string url2 = "http://gmail.com";
-
-            string[] contents;
-
-            using (var client = new HttpClient())
-            {
-                var downloadTask1 = client.GetStringAsync(url1);
-                var downloadTask2 = client.GetStringAsync(url2);
-                contents = await Task.WhenAll(downloadTask1, downloadTask2);
-            }
-
+            string[] contents = await AsyncUtils.DownloadAsStringsWithTimeoutAsync(new string[] { "http://google.com", "http://gmail.com" });
             Assert.AreEqual(2, contents.Length);
         }
 
