@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
@@ -83,6 +84,36 @@ namespace DataFlowBasics
 
             block1.Post(-2);
             await Task.Delay(2000);
+        }
+
+        [Test]
+        public async Task ThrottlingTest()
+        {
+            int fork1Processed = 0;
+            int fork2Processed = 0;
+            var source = new BufferBlock<int>();
+
+            var options = new ExecutionDataflowBlockOptions { BoundedCapacity = 1 };
+            var fork1 = new ActionBlock<int>(i =>
+            {
+                Interlocked.Increment(ref fork1Processed);
+            }, options);
+
+            var fork2 = new ActionBlock<int>(i =>
+            {
+                Interlocked.Increment(ref fork2Processed);
+            }, options);
+
+            source.LinkTo(fork1);
+            source.LinkTo(fork2);
+
+            foreach (int i in Enumerable.Range(1, 100))
+            {
+                source.Post(i);
+            }
+
+            await Task.Delay(2000);
+            Assert.That(fork2Processed > 0);
         }
     }
 }
