@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -65,6 +66,23 @@ namespace DataFlowBasics
             multiplyBlock.Post(2);
 
             Assert.ThrowsAsync<AggregateException>(async () => await subtractBlock.Completion);
+        }
+
+        [Test]
+        public async Task UlinkingBlocksTest()
+        {
+            var block1 = new TransformBlock<int, int>(i => i * 2);
+            var block2 = new ActionBlock<int>(i => Debug.WriteLine(i));
+            var link = block1.LinkTo(block2);
+
+            block1.Post(-1);
+            block1.Post(2);
+            await Task.Delay(2000);
+            // unlink
+            link.Dispose();
+
+            block1.Post(-2);
+            await Task.Delay(2000);
         }
     }
 }
